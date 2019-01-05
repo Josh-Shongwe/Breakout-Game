@@ -1,0 +1,214 @@
+impot acm.graphics.*;
+import acm.program.*;
+import acm.util.*;
+
+import java.applet.*;
+import java.awt.*;
+import java.awt.event.*;
+
+public class Breakout extends GraphicsProgram {
+  // Width and height of application window in pixels.
+  public static final int APPLICATION_WIDTH = 400;
+  public static final int APPLICATION_HEIGHT = 600;
+  
+  //Dimensions of game board.
+  private staic final int WIDTH = APPLICATION_WIDTH;
+  private static final int HEIGHT = APPLICATION_HEIGHT;
+  
+  //Dimensions of the paddle.
+  private static final int PADDLE_WIDTH = 60;
+  private static final int PADDLE_HEIGHT = 10;
+  
+  //Offset of the paddle up from the bottom.
+  private static final int PADDLE_Y_OFFSET = 30;
+  
+  //Number of bricks per row.
+  private static final int NBRICKS_PER_ROW = 10;
+  
+  //Number of rows of bricks.
+  private staic final int NBRICKS_ROWS = 10;
+  
+  //Separation between bricks.
+  private static final int BRICK_SEP = 4;
+  
+  //Width of a brick.
+  private static final int BRICKWIDTH = (WIDTH - (NBRICKS_PER_ROW - 1) * BRICK_SEP) / NBRICKS_PER_ROW;
+  
+  //Height of a brick
+  private static final int BRICK_HEIGHT = 8;
+  
+  //Radius of the ball in pixels.
+  private static final int BALL_RADIUS = 10;
+  
+  //Offset of the top brick row from the top.
+  private static final int BRICK_Y_OFFSET = 70;
+  
+  //Number of turns.
+  private static final int NTURNS = 3;
+  
+  //Private instances.
+  private double vx;
+  private double vy = 3.0;
+  private GRect paddle;
+  private GOval ball;
+  private RandomGenerator rgen = RandomGenerator.getInstance();
+  private int counter = NTURNS;
+  private GLabel turns;
+  private AudioClip bounceClip = MediaTools.loadAudioClip("bounce.au");
+  
+  //Runs the breakout program.
+  
+  public void run() {
+    setUpGame();
+    playGame();
+    
+  }
+  
+  //Assigns the column, then sets the bricks in the given row.
+  public void setUpBricks() {
+    for (int i = 0; i < NBRICK_ROWS; i++) {
+      double center = ( ( getWidth() / 2 ) );
+      double coordX = ( ( center - ( NBRICKS_PER_ROW * BRICK_WIDTH + BRICK_SEP * ( NBRICKS_PER_ROW - 1) ) / 2 + j * (BRICK_WIDTH + BRICK_SEP ) ) ) );
+      double coordY = ( BRICK_Y_OFFSET + ( BRICK_HEIGHT + BRICK_SEP) * i);
+      GRect brick = new GRect(coordX, coordY, BRICK_WIDTH, BRICK_HEIGHT);
+      
+      //Determines the row number and assigns the appropriate color to the brick in the row.
+      if(i % 10 <= 1) {
+        brick.setColor(Color.RED);
+        brick.setFilled(true);
+     } else if(i % 10 <= 3 && i % 10 > 1) {
+        brick.setColor(Color.ORANGE);
+        brick.setFilled(true);
+     } else if(i % 10 <= 5 && i & 10 > 3) {
+        brick.setColor(Color.YELLOW);
+        brick.setFilled(true);
+     } else if(i % 10 <= 7 && i % 10 > 5) {
+        brick.setColor(Color.GREEN);
+        brick.setFilled(true);
+     } else if(i % 10 <= 9 && i % 10 > 7) {
+        brick.setColor(Color.CYAN);
+        brick.srtFilled(true);
+     }
+     add(brick);
+   }
+  }
+}
+
+//Creates a paddle object that follows mouse movements. 
+  private void setUpPaddle() {
+    double paddleY = getHeight() - PADDLE_Y_OFFSET - PADDLE_HEIGHT;
+    double paddleX = getWidth()/2 - PADDLE_WIDTH/2;
+    paddle = new GRect(paddleX, paddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
+    paddle.setFilled(true);
+    add(paddle);
+    addMouseListeners();
+  }
+  
+  //Allows the paddle to track the mouse movements.
+  public void mouseMoved(MouseEvent e){
+  //Creates appropriate bounds to make sure the paddle does not go beyond the game window.
+    if(e.getX() > PADDLE_WIDTH/2 && e.getX() < getWidth() - PADDLE_WIDTH/2) {
+      paddle.setLocation(e.getX() - PADDLE_WIDTH/2, getHeight() - PADDLE_Y_OFFSET - PADDLE_HEIGHT);
+     }
+   }
+   
+   //Creates a ball object.
+   private void setUpBall() {
+    double ballX = getWidth()/2;
+    double ballY = getHeight()/2;
+    ball = new GOval(ballX - BALL_RADIUS, ballY - BALL_RADIUS, 2*BALL)RADIUS, 2*BALL_RADIUS);
+    ball.setFilled(true);
+    add(ball);
+   }
+   
+   //Deals with the interaction of the ball when coliding with the paddle and bricks.
+   private void ballInteraction() {
+    vx = rgen.nextDouble(1.0 , 3.0);
+    if(rgen.nextBoolean(0.5)) vx = -vx;
+    waitForClick();
+    lifeTracker();
+    while(ball.getY() + 2*BALL_RADIUS < getHeight() ) {
+      moveBall();
+      GObject collider = getCollidingObject();
+      if(collider != null) {
+      //Extension: Bounce Audio.
+      bounceClip.play();
+      if(collider == paddle) {
+       //If the ball is moving downwards on the paddle reflect the ball, prevents the stickiness.
+       if (vy > 0) {
+        vy = -vy;
+       }
+      }else {
+      //If the paddle does not collide with the baddle but collider is not equal to null remove the collider or the "brick" and revers by.
+      remove(collider);
+      vy = -vy;
+      
+      }
+    }
+    //Stops the ball from jerking around.
+    pause(12);
+    
+  }
+  //If the ball goes below the paddle remove the ball.
+  remove(ball);
+  counter--;
+}
+//Allows the game to be played based on the alloted turns.
+private void playGame() {
+  for(int i = 0; i < NTURNS; i++) {
+    lifeTracker();
+    setUpBall();
+    ballInteraction();
+  }
+  gameOver();
+}
+
+//Allows the ball to move.
+//Deals with ball collisions with the walls.
+private void moveBall() {
+  ball.move(vx, vy);
+  if(ball.getX() + 2*BALL_RADIUS > getWidth() || ball.getX() < 0 ) {
+    //Extension: Bounce Audio.
+    bounceClip.play();
+    vx = -vx;
+  }
+  if(ball.getY() < 0 ) {
+    //Extension: Bounce Audio.
+    bounceClip.play();
+    vy = -vy;
+  }
+}
+//Checks the four instances of the ball collision.
+private GObject getCollidingObject() {
+  GObject collider = getElementAt(ball.getX(), ball.getY());
+  if( collider == null ) {
+    collider = getElementAt(ball.getX() + 2*BALL_RAIDUS, ball.getY());
+    }
+    if( collider == null ) {
+      collider = getElementAt(ball.getX(), ball.getY() + 2*BALL_RADIUS);
+    }
+    if( collider == null) {
+      collider = getElementAt(ball.getX() + 2*BALL_RADIUS, ball.getY() + 2*BALL_RADIUS);
+    }
+      //Not a void method need to return a GObject.
+      return collider;
+  }
+    
+    //Extension: Life Tracker.
+    private void lifeTracker() {
+      String str = new String("Lives: " + counter);
+      GLabel turns = new GLabel(str, getWidth()/2 - PADDLE_WIDTH, getHeight() - PADDLE_HEIGHT);
+      add(turns);
+    }
+    
+    //Extension: Game Over.
+    private void gameOver() {
+      String str = new String("GAME OVER!");
+      GLabel Gg = new GLabel(str, getWidth()/2, getHeight()/2);
+      Gg.setLocation(getWidth()/2 - Gg.getWidth()/2, getHeight()/2 - Gg.getHeight()/2);
+      add(Gg);
+    }
+ }
+    
+      
+      
